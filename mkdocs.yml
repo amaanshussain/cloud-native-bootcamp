@@ -151,6 +151,11 @@ nav:
       - Labs:
           - Containers Lab: labs/containers/index.md
           - Image Registry Lab: labs/containers/container-registry/index.md
+          - Solutions Overview: labs/containers/lab-solutions.md
+          - Lab 1 - Containers Lab: labs/containers/lab1/index.md
+          - Lab 1 - Solution: labs/containers/lab1/solution.md
+          - Lab 2 - Image Registry Lab: labs/containers/lab2/index.md
+          - Lab 2 - Solution: labs/containers/lab2/solution.md
   - Kubernetes/OpenShift:
       - Overview: openshift/index.md
       - Container Orchestration Concepts: openshift/orchestrationConcepts.md
@@ -227,6 +232,10 @@ nav:
           - Argo CD Lab: labs/devops/argocd/index.md
   - Labs:
       - All Labs: labs/index.md
+      - Container Lab Solutions:
+          - Solutions Overview: labs/containers/lab-solutions.md
+          - Lab 1 Solution: labs/containers/lab1/solution.md
+          - Lab 2 Solution: labs/containers/lab2/solution.md
       - Kubernetes Lab Solutions:
           - Solutions Overview: labs/kubernetes/lab-solutions.md
           - Lab 1 Solution: labs/kubernetes/lab1/solution.md
