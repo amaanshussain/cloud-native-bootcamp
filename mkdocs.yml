@@ -146,11 +146,12 @@ nav:
           - Benefits of Containers: containers/benefitsContainers.md
           - Image Registries: containers/imageregistry.md
       - Resources:
+          - Container Tool Tutorials: containers/container-tool-tutorials.md
           - Registry Tutorials: containers/registry-tutorials.md
           - CLI Reference: containers/reference.md
       - Labs:
-          - Containers Lab: labs/containers/index.md
-          - Image Registry Lab: labs/containers/container-registry/index.md
+          - Containers Lab: labs/containers/lab1/index.md
+          - Image Registry Lab: labs/containers/lab2/index.md
   - Kubernetes/OpenShift:
       - Overview: openshift/index.md
       - Container Orchestration Concepts: openshift/orchestrationConcepts.md

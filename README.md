@@ -18,8 +18,8 @@ git clone https://github.com/ibm-cloud-architecture/cloud-native-bootcamp.git
 cd cloud-native-bootcamp
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-mkdocs serve            # http://127.0.0.1:8000 with live reload
-mkdocs build --strict   # the same check CI runs on every pull request
+zensical serve            # http://127.0.0.1:8000 with live reload
+zensical build --strict   # the same check CI runs on every pull request
 ```
 
 ### Using a container instead
@@ -36,7 +36,7 @@ npm run dev:stop
 ## Checks
 
 ```bash
-mkdocs build --strict   # broken links, missing nav entries, warnings
+zensical build --strict   # broken links, missing nav entries, warnings
 npm install && npm run spell   # spelling; add real terms to cspell.json
 ```
 
@@ -44,4 +44,4 @@ Acronym tooltips come from `includes/abbreviations.md`, which is appended to eve
 
 ## Publishing
 
-Pushing to `main` builds the site with `mkdocs build --strict` and deploys it to GitHub Pages (`.github/workflows/docs.yml`). Pull requests run the same build, plus non-blocking spelling and external link checks.
+Pushing to `main` builds the site with `zensical build --strict` and deploys it to GitHub Pages (`.github/workflows/docs.yml`). Pull requests run the same build, plus non-blocking spelling and external link checks.

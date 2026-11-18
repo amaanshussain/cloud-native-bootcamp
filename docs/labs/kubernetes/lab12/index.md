@@ -1,140 +1,140 @@
 ---
 tags:
   - Lab
-  - Packaging
   - Intermediate
+  - Packaging
+  - Helm
+  - Kustomize
+  - OpenShift
+  - Kubernetes
 ---
 
-# Lab 12 - Helm & Kustomize
+# Helm & Kustomize Lab
 
 <span class="lab-badge">45 min</span> <span class="lab-badge">Intermediate</span>
 
-## Problem
+In this lab you'll package and deploy the `greeting` microservice across multiple environments using **Kustomize** overlays and manage releases, upgrades, and rollbacks using **Helm**.
 
-The `greeting` service has to run in a **dev** and a **prod** environment with different settings. You'll deploy it both ways teams do in practice: with **Kustomize** overlays, then as a **Helm** release you can upgrade and roll back.
+This lab uses a **tutorial reference** format. Each step gives you a goal and points to the section of the [Helm & Kustomize](../../../openshift/packaging/index.md) or [Projects/Namespaces](../../../openshift/core-concepts/namespaces-projects/index.md) documentation that shows the command or syntax you need. **You build the manifests and commands yourself** by adapting the documentation examples to this lab. When the documentation doesn't cover something, the step gives you the command and explains what it does.
 
-See [Helm & Kustomize](../../../openshift/packaging/index.md) for the concepts.
+!!! tip "Keep the documentation open"
+    Open [Helm & Kustomize](../../../openshift/packaging/index.md) in a second tab before you start.
 
 ## Prerequisites
 
-- An OpenShift cluster (or Kubernetes: see the tip below) and the `oc` CLI
-- The `helm` CLI, version 4. Install it with `brew install helm` on macOS, or see the [Helm install guide](https://helm.sh/docs/intro/install/).
-- A clone of the bootcamp repository:
+- You're logged in to an OpenShift cluster with `oc` (or an upstream Kubernetes cluster with `kubectl`). See [Lab Environments](../../../lab-environments.md).
+- The `helm` CLI (v3 or v4).
+- A local clone of the bootcamp repository with your terminal located in `sample-app`:
+
+```bash
+cd sample-app
+```
+
+## Part 1: Kustomize Overlays
+
+1. Inspect the Kustomize directory structure and render the `dev` and `prod` overlays locally without applying them.
+    - **Reference:** [Helm & Kustomize, Kustomize](../../../openshift/packaging/index.md#kustomize) shows `oc kustomize <directory>`.
+    - Compare differences between rendered manifests:
 
     ```bash
-    git clone https://github.com/ibm-cloud-architecture/cloud-native-bootcamp.git
-    cd cloud-native-bootcamp/sample-app
-    ```
-
-!!! tip "Using plain Kubernetes?"
-    Everything works on kind or minikube. Remove the `components:` lines from the overlays (they add an OpenShift Route), use `kubectl` in place of `oc`, and use `kubectl port-forward` in place of the Route URLs.
-
-## Part 1: Kustomize
-
-1. Look at the layout, then render both overlays **without** applying them. What differs between dev and prod?
-
-    ```bash
-    find kustomize -type f
     oc kustomize kustomize/overlays/dev
     diff <(oc kustomize kustomize/overlays/dev) <(oc kustomize kustomize/overlays/prod)
     ```
 
-2. Create a project for each environment and deploy the matching overlay.
+    - **Check:** `diff` reveals replica counts (1 in dev vs 3 in prod), labels (`environment: dev` vs `prod`), and ConfigMap greeting messages.
 
-    ??? success "Solution"
-        ```bash
-        oc new-project greeting-dev
-        oc apply -k kustomize/overlays/dev -n greeting-dev
-        oc new-project greeting-prod
-        oc apply -k kustomize/overlays/prod -n greeting-prod
-        oc rollout status deployment/greeting -n greeting-dev
-        oc rollout status deployment/greeting -n greeting-prod
-        ```
+2. Create `greeting-dev` and `greeting-prod` projects and apply the respective Kustomize overlays.
+    - **Reference:** [Projects/Namespaces, References](../../../openshift/core-concepts/namespaces-projects/index.md#references) shows `oc new-project`. [Helm & Kustomize, Kustomize](../../../openshift/packaging/index.md#kustomize) shows `oc apply -k <directory>`.
 
-3. Call both environments through their Routes. Each should return its own greeting, and prod should have 3 pods.
+    ```bash
+    oc new-project greeting-dev
+    oc apply -k kustomize/overlays/dev -n greeting-dev
+    oc new-project greeting-prod
+    oc apply -k kustomize/overlays/prod -n greeting-prod
+    oc rollout status deployment/greeting -n greeting-dev
+    oc rollout status deployment/greeting -n greeting-prod
+    ```
+
+    - **Check:** both deployments roll out successfully, and `oc get pods -n greeting-prod` shows 3 running pods.
+
+3. Verify both environments by calling their respective Route endpoints.
+    - **Reference:** [Routes, Commands](../../../openshift/services-networking/routes.md#commands) shows retrieving Route hostnames.
 
     ```bash
     for env in dev prod; do
       curl -sk "https://$(oc get route greeting -n greeting-$env -o jsonpath='{.spec.host}')/greeting"; echo
     done
-    oc get pods -n greeting-prod -l app=greeting
     ```
 
-4. Change the dev greeting in `kustomize/overlays/dev/kustomization.yaml`. Before applying, preview the change with `oc diff`, then apply it. Why does the Deployment roll out new pods even though you only changed a ConfigMap value?
+    - **Check:** `greeting-dev` outputs `"message":"Hello from dev"` and `greeting-prod` outputs `"message":"Welcome to production"`.
 
-    ??? success "Solution"
-        ```bash
-        oc diff -k kustomize/overlays/dev -n greeting-dev
-        oc apply -k kustomize/overlays/dev -n greeting-dev
-        oc rollout status deployment/greeting -n greeting-dev
-        ```
+4. Modify `kustomize/overlays/dev/kustomization.yaml` to change the greeting text, preview with `oc diff -k`, and apply.
+    - **Reference:** [Helm & Kustomize, Kustomize](../../../openshift/packaging/index.md#kustomize) shows `oc diff -k` and `oc apply -k`.
+    - **Check:** `oc diff -k kustomize/overlays/dev -n greeting-dev` highlights the generated ConfigMap hash name and deployment pod template update, causing an automatic rolling update when applied.
 
-        `configMapGenerator` appends a hash of the content to the ConfigMap name, for example `greeting-config-cfm652bgbb`. A new value produces a new name, which changes the Deployment's pod template, so Kubernetes rolls out new pods that read the new value. A hand-written ConfigMap wouldn't do this, and pods would keep the old environment variables until restarted.
+5. Create a new overlay directory `kustomize/overlays/test` with 2 replicas, label `environment: test`, and greeting `Hello from test`, then deploy it to `greeting-test`.
+    - **Reference:** [Helm & Kustomize, Kustomize](../../../openshift/packaging/index.md#kustomize) shows overlay structure with `resources`, `components`, `labels`, `replicas`, and `configMapGenerator`.
+    - **Check:** `curl -sk "https://$(oc get route greeting -n greeting-test -o jsonpath='{.spec.host}')/greeting"` returns `{"message":"Hello from test","name":"World"}`.
 
-5. **Your turn:** create a new overlay, `kustomize/overlays/test`, that runs **2** replicas, labels everything `environment: test`, and greets with `Hello from test`. Deploy it to a `greeting-test` project.
+## Part 2: Helm Releases
 
-## Part 2: Helm
+6. Lint and render the `greeting` Helm chart locally.
+    - **Reference:** [Helm & Kustomize, Helm](../../../openshift/packaging/index.md#helm) shows `helm lint` and `helm template`.
+    - **Check:** `helm lint helm/greeting` reports `0 chart(s) failed`, and `helm template` outputs valid Kubernetes YAML.
 
-6. Check and render the chart locally. Nothing is created in the cluster yet.
+7. Create a project named `greeting-helm` and install the chart as a release named `greeting` with a custom greeting.
+    - **Reference:** [Helm & Kustomize, Helm](../../../openshift/packaging/index.md#helm) shows `helm install <release> <chart> --set ...`.
 
     ```bash
-    helm lint helm/greeting
-    helm template demo helm/greeting --set greeting="Hi"
+    oc new-project greeting-helm
+    helm install greeting ./helm/greeting --set greeting="Hello from Helm" --wait
     ```
 
-7. Install the chart as a release named `greeting` in a new `greeting-helm` project, with your own greeting.
+    - **Check:** `helm list` shows release `greeting` with status `deployed` (revision 1).
 
-    ??? success "Solution"
-        ```bash
-        oc new-project greeting-helm
-        helm install greeting ./helm/greeting --set greeting="Hello from Helm" --wait
-        helm list
-        ```
+8. Upgrade the release to `replicaCount=2` while preserving values, view history, and run chart tests.
+    - **Reference:** [Helm & Kustomize, Helm](../../../openshift/packaging/index.md#helm) shows `helm upgrade`, `helm history`, and `helm test`.
 
-        Helm prints the chart's `NOTES.txt`, including the URL to try.
+    ```bash
+    helm upgrade greeting ./helm/greeting --reuse-values --set replicaCount=2 --wait
+    helm history greeting
+    helm test greeting
+    ```
 
-8. Upgrade the release to 2 replicas, look at the release history, and run the chart's test.
+    - **Check:** `helm history greeting` shows revision 2, and `helm test greeting` passes (`Phase: Succeeded`).
 
-    ??? success "Solution"
-        ```bash
-        helm upgrade greeting ./helm/greeting --reuse-values --set replicaCount=2 --wait
-        helm history greeting
-        helm test greeting
-        ```
+9. Roll back the release to revision 1 and verify the replica count scales back to 1.
+    - **Reference:** [Helm & Kustomize, Helm](../../../openshift/packaging/index.md#helm) shows `helm rollback <release> <revision>`.
+    - **Check:** `helm rollback greeting 1 --wait` creates revision 3, and `oc get deployment greeting -n greeting-helm` shows 1 replica.
 
-        `--reuse-values` keeps the greeting you set at install time. Without it, values not passed again fall back to the chart defaults.
+10. Upgrade the release using `values-prod.yaml` to apply production resource requirements and replicas.
+    - **Reference:** [Helm & Kustomize, Helm](../../../openshift/packaging/index.md#helm) shows `helm upgrade --install -f <values-file>`.
 
-9. Roll back to the first revision and confirm the replica count. What revision number does the rollback create?
+    ```bash
+    helm upgrade --install greeting ./helm/greeting -f helm/greeting/values-prod.yaml --wait
+    ```
 
-    ??? success "Solution"
-        ```bash
-        helm rollback greeting 1 --wait
-        helm history greeting
-        oc get deployment greeting
-        ```
-
-        The rollback creates revision **3**, a copy of revision 1. Helm never rewrites history.
-
-10. Upgrade to the production values file, `values-prod.yaml`. It sets 3 replicas, more memory, and enables a ServiceMonitor for Prometheus, which you'll use in [Lab 13](../lab13/index.md).
-
-    ??? success "Solution"
-        ```bash
-        helm upgrade --install greeting ./helm/greeting -f helm/greeting/values-prod.yaml --wait
-        helm get values greeting
-        ```
-
-        If this fails with `no matches for kind "ServiceMonitor"`, the cluster doesn't have the monitoring API. Add `--set serviceMonitor.enabled=false`.
-
-## Part 3 (optional): Let Argo CD deploy it
-
-After you've done the [Argo CD Lab](../../devops/argocd/index.md), create an Application whose `path` is `sample-app/kustomize/overlays/dev` in your fork. Argo CD runs Kustomize for you, so you never run `oc apply -k` again. Promote a new image by changing `newTag` in the overlay and pushing the commit.
+    - **Check:** `helm get values greeting` displays production values and `oc get pods -n greeting-helm` lists 3 pods.
 
 ## Cleanup
+
+Uninstall the Helm release and delete all created projects.
+
+- **Reference:** [Helm & Kustomize, Helm](../../../openshift/packaging/index.md#helm) and [Projects/Namespaces](../../../openshift/core-concepts/namespaces-projects/index.md#references).
 
 ```bash
 helm uninstall greeting -n greeting-helm
 oc delete project greeting-dev greeting-prod greeting-test greeting-helm
 ```
 
-!!! note "About the image"
-    The overlays and chart use `ghcr.io/ibm-cloud-architecture/cloud-native-bootcamp/greeting:v1.1.0`. To use the image you built in the [Containers Lab](../../containers/index.md) instead, set `images[].newName` in an overlay, or `--set image.repository=quay.io/<you>/greeting` with Helm.
+| Part | What it does |
+| --- | --- |
+| `helm uninstall greeting ...` | Removes all resources managed by the Helm release |
+| `oc delete project ...` | Deletes all lab projects |
+
+## What you learned
+
+- [x] Structuring multi-environment deployments using Kustomize bases and overlays
+- [x] Leveraging `configMapGenerator` content hashes for automated deployment rollouts
+- [x] Packaging applications into Helm charts with configurable `values.yaml`
+- [x] Managing Helm release lifecycles: linting, templating, installing, upgrading, and rolling back

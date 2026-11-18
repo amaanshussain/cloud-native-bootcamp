@@ -6,7 +6,28 @@ tags:
 
 # Registry Tutorials
 
-This page provides step-by-step tutorials for working with popular container registries. Select a registry below to get started.
+This page continues from the [Container Tool Tutorials](container-tool-tutorials.md). You will take the `my-web-app:v1.1` image you built there, tag it for a registry, and push it. Select a registry below to get started.
+
+## Before you begin
+
+Make sure the `my-web-app:v1.1` image from the previous tutorial exists locally:
+
+=== "Podman"
+
+    ```bash
+    podman images my-web-app
+    ```
+
+=== "Docker"
+
+    ```bash
+    docker images my-web-app
+    ```
+
+You should see a `v1.1` tag in the output.
+
+!!! warning "Image not found?"
+    If the image is missing, go back to the [Container Tool Tutorials](container-tool-tutorials.md) and complete steps 6 through 9 to build it. Do not remove `v1.1` with `rmi` until you have finished this tutorial.
 
 === "Red Hat Quay"
 
@@ -17,6 +38,7 @@ This page provides step-by-step tutorials for working with popular container reg
     ### Prerequisites
 
     - Docker or Podman installed and running
+    - The `my-web-app:v1.1` image from the [Container Tool Tutorials](container-tool-tutorials.md)
     - A free Quay.io account ([Sign up here](https://quay.io/signin/){target="_blank"})
 
     ### Tutorial
@@ -37,64 +59,54 @@ This page provides step-by-step tutorials for working with popular container reg
         Login Succeeded!
         ```
 
-        **2. Pull a base image**
+        **2. Tag for Quay.io**
 
-        Pull an image from Docker Hub to use as a starting point:
-
-        ```bash
-        podman pull docker.io/library/alpine:latest
-        ```
-
-        **3. Create a simple container**
-
-        Run a container and make a small modification:
+        Tag your image with the registry, your Quay.io username, and a repository name:
 
         ```bash
-        podman run -it --name my-alpine docker.io/library/alpine:latest /bin/sh
-        ```
-
-        Inside the container, create a file:
-
-        ```bash
-        echo "Hello from Quay!" > /hello.txt
-        exit
-        ```
-
-        **4. Commit the container to a new image**
-
-        ```bash
-        podman commit my-alpine my-quay-image:v1.0
-        ```
-
-        **5. Tag for Quay.io**
-
-        Tag the image with your Quay.io username and repository name:
-
-        ```bash
-        podman tag my-quay-image:v1.0 quay.io/your_username/my-quay-image:v1.0
+        podman tag my-web-app:v1.1 quay.io/your_username/my-web-app:v1.1
         ```
 
         !!! note "Replace `your_username`"
             Replace `your_username` with your actual Quay.io username.
 
-        **6. Push to Quay.io**
+        Confirm both names point at the same image ID:
 
         ```bash
-        podman push quay.io/your_username/my-quay-image:v1.0
+        podman images my-web-app
         ```
 
-        **7. Verify your push**
+        **3. Push to Quay.io**
+
+        ```bash
+        podman push quay.io/your_username/my-web-app:v1.1
+        ```
+
+        **4. Verify your push**
 
         Visit [Quay.io Repositories](https://quay.io/repository/){target="_blank"} to see your pushed image.
 
         !!! tip "Repository Visibility"
             By default, new repositories on Quay.io are private. You can change visibility in the repository settings.
 
-        **8. Clean up**
+        **5. Run the image from the registry**
+
+        Remove the local registry-tagged image, then run it again to prove it is pulled from Quay.io:
 
         ```bash
-        podman rm my-alpine
-        podman rmi my-quay-image:v1.0
+        podman rmi quay.io/your_username/my-web-app:v1.1
+        podman run -d --name my-web-app -p 8080:80 quay.io/your_username/my-web-app:v1.1
+        curl http://localhost:8080
+        ```
+
+        !!! note "Private repositories"
+            If the repository is private, you must stay logged in (step 1) for the pull to succeed.
+
+        **6. Clean up**
+
+        ```bash
+        podman rm -f my-web-app
+        podman rmi quay.io/your_username/my-web-app:v1.1 my-web-app:v1.1
         ```
 
     === "Docker"
@@ -113,64 +125,54 @@ This page provides step-by-step tutorials for working with popular container reg
         Login Succeeded!
         ```
 
-        **2. Pull a base image**
+        **2. Tag for Quay.io**
 
-        Pull an image from Docker Hub to use as a starting point:
-
-        ```bash
-        docker pull alpine:latest
-        ```
-
-        **3. Create a simple container**
-
-        Run a container and make a small modification:
+        Tag your image with the registry, your Quay.io username, and a repository name:
 
         ```bash
-        docker run -it --name my-alpine alpine:latest /bin/sh
-        ```
-
-        Inside the container, create a file:
-
-        ```bash
-        echo "Hello from Quay!" > /hello.txt
-        exit
-        ```
-
-        **4. Commit the container to a new image**
-
-        ```bash
-        docker commit my-alpine my-quay-image:v1.0
-        ```
-
-        **5. Tag for Quay.io**
-
-        Tag the image with your Quay.io username and repository name:
-
-        ```bash
-        docker tag my-quay-image:v1.0 quay.io/your_username/my-quay-image:v1.0
+        docker tag my-web-app:v1.1 quay.io/your_username/my-web-app:v1.1
         ```
 
         !!! note "Replace `your_username`"
             Replace `your_username` with your actual Quay.io username.
 
-        **6. Push to Quay.io**
+        Confirm both names point at the same image ID:
 
         ```bash
-        docker push quay.io/your_username/my-quay-image:v1.0
+        docker images my-web-app
         ```
 
-        **7. Verify your push**
+        **3. Push to Quay.io**
+
+        ```bash
+        docker push quay.io/your_username/my-web-app:v1.1
+        ```
+
+        **4. Verify your push**
 
         Visit [Quay.io Repositories](https://quay.io/repository/){target="_blank"} to see your pushed image.
 
         !!! tip "Repository Visibility"
             By default, new repositories on Quay.io are private. You can change visibility in the repository settings.
 
-        **8. Clean up**
+        **5. Run the image from the registry**
+
+        Remove the local registry-tagged image, then run it again to prove it is pulled from Quay.io:
 
         ```bash
-        docker rm my-alpine
-        docker rmi my-quay-image:v1.0
+        docker rmi quay.io/your_username/my-web-app:v1.1
+        docker run -d --name my-web-app -p 8080:80 quay.io/your_username/my-web-app:v1.1
+        curl http://localhost:8080
+        ```
+
+        !!! note "Private repositories"
+            If the repository is private, you must stay logged in (step 1) for the pull to succeed.
+
+        **6. Clean up**
+
+        ```bash
+        docker rm -f my-web-app
+        docker rmi quay.io/your_username/my-web-app:v1.1 my-web-app:v1.1
         ```
 
     ### Quay.io Features
@@ -198,6 +200,7 @@ This page provides step-by-step tutorials for working with popular container reg
     ### Prerequisites
 
     - Docker or Podman installed and running
+    - The `my-web-app:v1.1` image from the [Container Tool Tutorials](container-tool-tutorials.md)
     - IBM Cloud account ([Sign up here](https://cloud.ibm.com/registration){target="_blank"})
     - IBM Cloud CLI installed
 
@@ -252,18 +255,12 @@ This page provides step-by-step tutorials for working with popular container reg
         ibmcloud cr login --client podman
         ```
 
-        **6. Pull a base image**
+        **6. Tag for IBM Cloud Registry**
+
+        Tag your image with your region and namespace:
 
         ```bash
-        podman pull docker.io/library/hello-world:latest
-        ```
-
-        **7. Tag for IBM Cloud Registry**
-
-        Tag the image with your region and namespace:
-
-        ```bash
-        podman tag hello-world:latest us.icr.io/my_namespace/hello-world:v1.0
+        podman tag my-web-app:v1.1 us.icr.io/my_namespace/my-web-app:v1.1
         ```
 
         !!! info "Regional Endpoints"
@@ -275,27 +272,33 @@ This page provides step-by-step tutorials for working with popular container reg
             | AP North | `jp.icr.io` |
             | AP South | `au.icr.io` |
 
-        **8. Push to IBM Cloud Registry**
+        **7. Push to IBM Cloud Registry**
 
         ```bash
-        podman push us.icr.io/my_namespace/hello-world:v1.0
+        podman push us.icr.io/my_namespace/my-web-app:v1.1
         ```
 
-        **9. Verify your push**
+        **8. Verify your push**
 
         ```bash
         ibmcloud cr image-list
         ```
 
-        **10. Scan for vulnerabilities**
+        **9. Scan for vulnerabilities**
 
         IBM Cloud Registry includes Vulnerability Advisor:
 
         ```bash
-        ibmcloud cr va us.icr.io/my_namespace/hello-world:v1.0
+        ibmcloud cr va us.icr.io/my_namespace/my-web-app:v1.1
         ```
 
         You can also view your images in the [IBM Cloud Console](https://cloud.ibm.com/containers/registry/images){target="_blank"}.
+
+        **10. Clean up**
+
+        ```bash
+        podman rmi us.icr.io/my_namespace/my-web-app:v1.1 my-web-app:v1.1
+        ```
 
     === "Docker"
 
@@ -346,18 +349,12 @@ This page provides step-by-step tutorials for working with popular container reg
         ibmcloud cr login --client docker
         ```
 
-        **6. Pull a base image**
+        **6. Tag for IBM Cloud Registry**
+
+        Tag your image with your region and namespace:
 
         ```bash
-        docker pull hello-world:latest
-        ```
-
-        **7. Tag for IBM Cloud Registry**
-
-        Tag the image with your region and namespace:
-
-        ```bash
-        docker tag hello-world:latest us.icr.io/my_namespace/hello-world:v1.0
+        docker tag my-web-app:v1.1 us.icr.io/my_namespace/my-web-app:v1.1
         ```
 
         !!! info "Regional Endpoints"
@@ -369,27 +366,33 @@ This page provides step-by-step tutorials for working with popular container reg
             | AP North | `jp.icr.io` |
             | AP South | `au.icr.io` |
 
-        **8. Push to IBM Cloud Registry**
+        **7. Push to IBM Cloud Registry**
 
         ```bash
-        docker push us.icr.io/my_namespace/hello-world:v1.0
+        docker push us.icr.io/my_namespace/my-web-app:v1.1
         ```
 
-        **9. Verify your push**
+        **8. Verify your push**
 
         ```bash
         ibmcloud cr image-list
         ```
 
-        **10. Scan for vulnerabilities**
+        **9. Scan for vulnerabilities**
 
         IBM Cloud Registry includes Vulnerability Advisor:
 
         ```bash
-        ibmcloud cr va us.icr.io/my_namespace/hello-world:v1.0
+        ibmcloud cr va us.icr.io/my_namespace/my-web-app:v1.1
         ```
 
         You can also view your images in the [IBM Cloud Console](https://cloud.ibm.com/containers/registry/images){target="_blank"}.
+
+        **10. Clean up**
+
+        ```bash
+        docker rmi us.icr.io/my_namespace/my-web-app:v1.1 my-web-app:v1.1
+        ```
 
     ### IBM Cloud Registry Features
 
@@ -414,25 +417,14 @@ This page provides step-by-step tutorials for working with popular container reg
     ### Prerequisites
 
     - Docker or Podman installed and running
+    - The `my-web-app:v1.1` image from the [Container Tool Tutorials](container-tool-tutorials.md)
     - A free Docker Hub account ([Sign up here](https://hub.docker.com/signup){target="_blank"})
 
     ### Tutorial
 
     === "Podman"
 
-        **1. Search for images**
-
-        ```bash
-        podman search docker.io/nginx
-        ```
-
-        **2. Pull an image**
-
-        ```bash
-        podman pull docker.io/library/nginx:1.29-alpine
-        ```
-
-        **3. Login to Docker Hub**
+        **1. Login to Docker Hub**
 
         ```bash
         podman login docker.io
@@ -440,37 +432,45 @@ This page provides step-by-step tutorials for working with popular container reg
 
         Enter your Docker Hub username and password when prompted.
 
-        **4. Tag your image**
+        **2. Tag your image**
 
         ```bash
-        podman tag myapp:latest docker.io/yourusername/myapp:v1.0
+        podman tag my-web-app:v1.1 docker.io/your_username/my-web-app:v1.1
         ```
 
-        **5. Push to Docker Hub**
+        !!! note "Replace `your_username`"
+            Replace `your_username` with your actual Docker Hub username.
+
+        **3. Push to Docker Hub**
 
         ```bash
-        podman push docker.io/yourusername/myapp:v1.0
+        podman push docker.io/your_username/my-web-app:v1.1
         ```
 
-        **6. Verify your push**
+        **4. Verify your push**
 
         Visit [Docker Hub](https://hub.docker.com/){target="_blank"} and navigate to your repositories to see your pushed image.
 
+        **5. Run the image from the registry**
+
+        Remove the local registry-tagged image, then run it again to prove it is pulled from Docker Hub:
+
+        ```bash
+        podman rmi docker.io/your_username/my-web-app:v1.1
+        podman run -d --name my-web-app -p 8080:80 docker.io/your_username/my-web-app:v1.1
+        curl http://localhost:8080
+        ```
+
+        **6. Clean up**
+
+        ```bash
+        podman rm -f my-web-app
+        podman rmi docker.io/your_username/my-web-app:v1.1 my-web-app:v1.1
+        ```
+
     === "Docker"
 
-        **1. Search for images**
-
-        ```bash
-        docker search nginx
-        ```
-
-        **2. Pull an image**
-
-        ```bash
-        docker pull nginx:1.29-alpine
-        ```
-
-        **3. Login to Docker Hub**
+        **1. Login to Docker Hub**
 
         ```bash
         docker login
@@ -478,21 +478,41 @@ This page provides step-by-step tutorials for working with popular container reg
 
         Enter your Docker Hub username and password when prompted.
 
-        **4. Tag your image**
+        **2. Tag your image**
 
         ```bash
-        docker tag myapp:latest yourusername/myapp:v1.0
+        docker tag my-web-app:v1.1 your_username/my-web-app:v1.1
         ```
 
-        **5. Push to Docker Hub**
+        !!! note "Replace `your_username`"
+            Replace `your_username` with your actual Docker Hub username.
+
+        **3. Push to Docker Hub**
 
         ```bash
-        docker push yourusername/myapp:v1.0
+        docker push your_username/my-web-app:v1.1
         ```
 
-        **6. Verify your push**
+        **4. Verify your push**
 
         Visit [Docker Hub](https://hub.docker.com/){target="_blank"} and navigate to your repositories to see your pushed image.
+
+        **5. Run the image from the registry**
+
+        Remove the local registry-tagged image, then run it again to prove it is pulled from Docker Hub:
+
+        ```bash
+        docker rmi your_username/my-web-app:v1.1
+        docker run -d --name my-web-app -p 8080:80 your_username/my-web-app:v1.1
+        curl http://localhost:8080
+        ```
+
+        **6. Clean up**
+
+        ```bash
+        docker rm -f my-web-app
+        docker rmi your_username/my-web-app:v1.1 my-web-app:v1.1
+        ```
 
     ### Resources
 
