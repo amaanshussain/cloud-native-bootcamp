@@ -7,11 +7,16 @@ tags:
   - Intermediate
 ---
 
-# Tekton Lab - OpenShift Pipelines
+# Tekton Lab: Tutorial Reference
 
 <span class="lab-badge">60 min</span> <span class="lab-badge">Intermediate</span>
 
 In this lab you'll use **Red Hat OpenShift Pipelines**, Red Hat's supported distribution of [Tekton](https://tekton.dev/), to build a continuous integration pipeline. The pipeline clones the bootcamp's sample app from Git, builds a container image, pushes it to OpenShift's internal registry, and deploys it.
+
+This lab uses a **tutorial reference** format. Each step gives you a goal and points to the section of the [Tekton Overview](../../../devops/tekton/index.md) or the OpenShift pages ([Projects/Namespaces](../../../openshift/core-concepts/namespaces-projects/index.md), [Deployments](../../../openshift/deployments/index.md), [Pods](../../../openshift/pods/index.md), [Routes](../../../openshift/services-networking/routes.md)) that show the command you need. **You build the command yourself** by adapting the example to this lab. When those pages don't cover something, such as the `tkn` CLI, the step gives you the command and explains what it does.
+
+!!! tip "Keep the references open"
+    Open the [Projects/Namespaces](../../../openshift/core-concepts/namespaces-projects/index.md) and [Pods](../../../openshift/pods/index.md) pages in other tabs before you start. They use `dev` and `myapp-pod` where this lab uses `tekton-lab` and the `greeting` app.
 
 ## Prerequisites
 
@@ -43,38 +48,14 @@ In this lab you'll use **Red Hat OpenShift Pipelines**, Red Hat's supported dist
 
 Skip this section if OpenShift Pipelines is already installed. Check with `oc get csv -n openshift-operators | grep pipelines`.
 
-=== "Web console"
+Install the **Red Hat OpenShift Pipelines** operator from the web console or with a `Subscription`.
 
-    1. Log in to the web console as a cluster administrator.
-    2. Go to **Operators > OperatorHub** (**Ecosystem > Software Catalog** on OpenShift 4.20 and later).
-    3. Search for **Red Hat OpenShift Pipelines**, then click **Install** and accept the defaults.
-    4. Wait until the operator status shows **Succeeded**.
-
-=== "CLI"
-
-    ```bash
-    oc apply -f - <<'EOF'
-    apiVersion: operators.coreos.com/v1alpha1
-    kind: Subscription
-    metadata:
-      name: openshift-pipelines-operator-rh
-      namespace: openshift-operators
-    spec:
-      channel: latest
-      name: openshift-pipelines-operator-rh
-      source: redhat-operators
-      sourceNamespace: openshift-marketplace
-    EOF
-    ```
-
-    Wait for the operator, then for the Tekton components it installs:
-
-    ```bash
-    oc get csv -n openshift-operators -w      # wait for PHASE = Succeeded, then Ctrl+C
-    oc get pods -n openshift-pipelines
-    ```
+- **Reference:** [How to use Operators, Installing via the Web Console](../../../openshift/operators/operatorUsage.md#installing-via-the-web-console) and [Installing via the CLI](../../../openshift/operators/operatorUsage.md#installing-via-the-cli). Search for **Red Hat OpenShift Pipelines** in the console. For the CLI, set the Subscription's `name` to `openshift-pipelines-operator-rh`, `channel` to `latest`, `source` to `redhat-operators` and `sourceNamespace` to `openshift-marketplace`.
+- **Check:** the operator status shows **Succeeded**, and `oc get pods -n openshift-pipelines` lists running Tekton pods.
 
 ## Tekton concepts
+
+Read the [Tekton Overview](../../../devops/tekton/index.md#tekton-overview) first. These are the resources you'll use:
 
 | Resource | What it is |
 | --- | --- |
@@ -87,46 +68,64 @@ Skip this section if OpenShift Pipelines is already installed. Check with `oc ge
 
 ## Setup
 
-```bash
-oc new-project tekton-lab
-```
+1. Create a project named `tekton-lab` and switch to it.
+    - **Reference:** [Projects/Namespaces, References](../../../openshift/core-concepts/namespaces-projects/index.md#references). Create `tekton-lab` instead of `dev`.
+    - **Check:** `oc project` shows `tekton-lab`.
 
 OpenShift Pipelines automatically creates a `pipeline` ServiceAccount in every project. PipelineRuns use it, and it has permission to push to the project's image streams and to create Deployments.
 
 ## Part 1: Your first Task
 
-1. Save this Task as `hello-task.yaml`:
+### Create hello-task.yaml
 
-    ```yaml title="hello-task.yaml"
-    apiVersion: tekton.dev/v1
-    kind: Task
-    metadata:
-      name: hello
-    spec:
-      params:
-        - name: name
-          type: string
-          default: Padawan
-      steps:
-        - name: say-hello
-          image: registry.access.redhat.com/ubi9/ubi-minimal
-          script: |
-            #!/usr/bin/env bash
-            echo "Hello, $(params.name)! Running in pod ${HOSTNAME}."
-    ```
+A Task with one step that prints a greeting. It takes one parameter, `name`.
 
-2. Create the Task and list the Tasks in your project:
+```yaml title="hello-task.yaml"
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: hello
+spec:
+  params:
+    - name: name
+      type: string
+      default: Padawan
+  steps:
+    - name: say-hello
+      image: registry.access.redhat.com/ubi9/ubi-minimal
+      script: |
+        #!/usr/bin/env bash
+        echo "Hello, $(params.name)! Running in pod ${HOSTNAME}."
+```
+
+- `kind: Task` is a Tekton resource that the OpenShift Pipelines operator added to the cluster.
+- `params` declares the inputs of the Task. `default` is used when the caller doesn't pass a value.
+- `steps` is the ordered list of containers. Each step has its own `image`, and all steps of a Task run in one pod.
+- `script` is written into the container and run. `$(params.name)` is replaced with the parameter value before the step starts.
+
+2. Create the Task from `hello-task.yaml`, then list the Tasks in your project.
+    - **Reference:** [Deployments, References](../../../openshift/deployments/index.md#references) shows `oc apply -f`. It doesn't cover listing Tekton resources, so use this command to list the Tasks:
 
     ```bash
-    oc apply -f hello-task.yaml
     tkn task list
     ```
 
-3. Run it with `tkn`, override the parameter, and stream the logs:
+    `tkn task list` prints the Tasks in the current project, with their age.
+
+    - **Check:** `hello` is in the list.
+
+3. Run the `hello` Task, override the `name` parameter with `Jedi`, and stream the logs.
+    - **Reference:** [Tekton Overview](../../../devops/tekton/index.md#tekton-overview) introduces the `tkn` CLI. It doesn't cover running a Task, so use this command:
 
     ```bash
     tkn task start hello -p name=Jedi --showlog
     ```
+
+    | Part | What it does |
+    | --- | --- |
+    | `tkn task start hello` | Creates a **TaskRun** for the Task `hello` |
+    | `-p name=Jedi` | Sets the parameter `name`, which replaces the default `Padawan` |
+    | `--showlog` | Streams the logs of the TaskRun until it finishes |
 
     ```text title="Expected output"
     TaskRun started: hello-run-8xk2p
@@ -134,20 +133,19 @@ OpenShift Pipelines automatically creates a `pipeline` ServiceAccount in every p
     [say-hello] Hello, Jedi! Running in pod hello-run-8xk2p-pod.
     ```
 
-4. `tkn` created a **TaskRun** object for you. List the TaskRuns, then look at the pod that ran the step:
+    - **Check:** the log line says `Hello, Jedi!`.
 
-    ```bash
-    tkn taskrun list
-    oc get pods
-    ```
+4. `tkn` created a **TaskRun** object for you. List the TaskRuns, then look at the pod that ran the step.
+    - **Reference:** [Pods, References](../../../openshift/pods/index.md#references) shows `oc get pods`. It doesn't cover TaskRuns, so use this command to list them: `tkn taskrun list`
+    - **Check:** the TaskRun has status `Succeeded`, and the pod `hello-run-8xk2p-pod` (your suffix differs) has status `Completed`.
 
 ## Part 2: A build-and-deploy Pipeline
 
-Instead of writing every Task yourself, reuse the Tasks that OpenShift Pipelines ships in the `openshift-pipelines` namespace. Reference them with the **cluster resolver**:
+Instead of writing every Task yourself, reuse the Tasks that OpenShift Pipelines ships in the `openshift-pipelines` namespace. You reference them with the **cluster resolver**.
 
-```bash
-oc get tasks -n openshift-pipelines
-```
+5. List the Tasks in the `openshift-pipelines` namespace.
+    - **Reference:** [Deployments, References](../../../openshift/deployments/index.md#references) shows `oc get <resource> <name>`. List `tasks` instead of a deployment, and select the namespace with `-n openshift-pipelines`.
+    - **Check:** the list contains `git-clone`, `buildah` and `openshift-client`.
 
 This lab uses three of them:
 
@@ -160,94 +158,103 @@ This lab uses three of them:
 !!! note "Coming from ClusterTasks?"
     Older tutorials use `kind: ClusterTask` references. OpenShift Pipelines 1.17 removed ClusterTasks. Use `resolver: cluster`, as shown below.
 
-1. Save this Pipeline as `pipeline.yaml`:
+### Create pipeline.yaml
 
-    ```yaml title="pipeline.yaml"
-    apiVersion: tekton.dev/v1
-    kind: Pipeline
-    metadata:
-      name: build-and-deploy
-    spec:
+A Pipeline with three Tasks that run one after another: clone, build, deploy.
+
+```yaml title="pipeline.yaml"
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+  params:
+    - name: git-url
+      type: string
+      default: https://github.com/ibm-cloud-architecture/cloud-native-bootcamp.git
+    - name: git-revision
+      type: string
+      default: main
+    - name: context-dir
+      type: string
+      description: Directory in the repo that contains the Containerfile
+      default: sample-app/greeting
+    - name: app-name
+      type: string
+      default: greeting
+  workspaces:
+    - name: source
+  tasks:
+    - name: fetch-source
+      taskRef:
+        resolver: cluster
+        params:
+          - { name: kind, value: task }
+          - { name: name, value: git-clone }
+          - { name: namespace, value: openshift-pipelines }
       params:
-        - name: git-url
-          type: string
-          default: https://github.com/ibm-cloud-architecture/cloud-native-bootcamp.git
-        - name: git-revision
-          type: string
-          default: main
-        - name: context-dir
-          type: string
-          description: Directory in the repo that contains the Containerfile
-          default: sample-app/greeting
-        - name: app-name
-          type: string
-          default: greeting
+        - { name: URL, value: $(params.git-url) }
+        - { name: REVISION, value: $(params.git-revision) }
       workspaces:
-        - name: source
-      tasks:
-        - name: fetch-source
-          taskRef:
-            resolver: cluster
-            params:
-              - { name: kind, value: task }
-              - { name: name, value: git-clone }
-              - { name: namespace, value: openshift-pipelines }
-          params:
-            - { name: URL, value: $(params.git-url) }
-            - { name: REVISION, value: $(params.git-revision) }
-          workspaces:
-            - { name: output, workspace: source }
+        - { name: output, workspace: source }
 
-        - name: build-image
-          runAfter: [fetch-source]
-          taskRef:
-            resolver: cluster
-            params:
-              - { name: kind, value: task }
-              - { name: name, value: buildah }
-              - { name: namespace, value: openshift-pipelines }
-          params:
-            - name: IMAGE
-              value: image-registry.openshift-image-registry.svc:5000/$(context.pipelineRun.namespace)/$(params.app-name):latest
-            - { name: CONTEXT, value: $(params.context-dir) }
-            - { name: DOCKERFILE, value: $(params.context-dir)/Containerfile }
-          workspaces:
-            - { name: source, workspace: source }
+    - name: build-image
+      runAfter: [fetch-source]
+      taskRef:
+        resolver: cluster
+        params:
+          - { name: kind, value: task }
+          - { name: name, value: buildah }
+          - { name: namespace, value: openshift-pipelines }
+      params:
+        - name: IMAGE
+          value: image-registry.openshift-image-registry.svc:5000/$(context.pipelineRun.namespace)/$(params.app-name):latest
+        - { name: CONTEXT, value: $(params.context-dir) }
+        - { name: DOCKERFILE, value: $(params.context-dir)/Containerfile }
+      workspaces:
+        - { name: source, workspace: source }
 
-        - name: deploy
-          runAfter: [build-image]
-          taskRef:
-            resolver: cluster
-            params:
-              - { name: kind, value: task }
-              - { name: name, value: openshift-client }
-              - { name: namespace, value: openshift-pipelines }
-          params:
-            - name: SCRIPT
-              value: |
-                IMAGE="$(tasks.build-image.results.IMAGE_URL)@$(tasks.build-image.results.IMAGE_DIGEST)"
-                oc get deployment $(params.app-name) || \
-                  oc create deployment $(params.app-name) --image="${IMAGE}" --port=8080
-                oc set image deployment/$(params.app-name) "*=${IMAGE}"
-                oc rollout status deployment/$(params.app-name) --timeout=3m
-                oc get service $(params.app-name) || oc expose deployment $(params.app-name) --port=8080
-                oc get route $(params.app-name) || oc expose service $(params.app-name)
-    ```
+    - name: deploy
+      runAfter: [build-image]
+      taskRef:
+        resolver: cluster
+        params:
+          - { name: kind, value: task }
+          - { name: name, value: openshift-client }
+          - { name: namespace, value: openshift-pipelines }
+      params:
+        - name: SCRIPT
+          value: |
+            IMAGE="$(tasks.build-image.results.IMAGE_URL)@$(tasks.build-image.results.IMAGE_DIGEST)"
+            oc get deployment $(params.app-name) || \
+              oc create deployment $(params.app-name) --image="${IMAGE}" --port=8080
+            oc set image deployment/$(params.app-name) "*=${IMAGE}"
+            oc rollout status deployment/$(params.app-name) --timeout=3m
+            oc get service $(params.app-name) || oc expose deployment $(params.app-name) --port=8080
+            oc get route $(params.app-name) || oc expose service $(params.app-name)
+```
 
-    A few things to notice:
+- `params` are the inputs of the Pipeline. The defaults point at the bootcamp repository and the `greeting` app.
+- `workspaces` declares storage that Tasks share. `fetch-source` writes the cloned code into `source`, and `build-image` reads it.
+- `taskRef` with `resolver: cluster` fetches the Task from the `openshift-pipelines` namespace instead of from your project.
+- `runAfter` orders the Tasks. Tasks without it run in parallel.
+- `$(tasks.build-image.results.IMAGE_DIGEST)` passes a **result** from one Task to another. Deploying by digest guarantees that every build rolls out, even though the tag (`latest`) stays the same.
+- `$(context.pipelineRun.namespace)` resolves to the project the pipeline runs in.
+- The `deploy` script is idempotent: it creates the Deployment, Service and Route on the first run and only updates the image afterwards.
 
-    - `$(tasks.build-image.results.IMAGE_DIGEST)` passes a **result** from one Task to another. Deploying by digest guarantees that every build rolls out, even though the tag (`latest`) stays the same.
-    - `$(context.pipelineRun.namespace)` resolves to the project the pipeline runs in.
-    - The `deploy` script is idempotent: it creates the Deployment, Service and Route on the first run and only updates the image afterwards.
-
-2. Create the Pipeline and look at it:
+6. Create the Pipeline from `pipeline.yaml` and look at it.
+    - **Reference:** [Deployments, References](../../../openshift/deployments/index.md#references) shows `oc apply -f`. It doesn't cover inspecting a Pipeline, so use this command:
 
     ```bash
-    oc apply -f pipeline.yaml
     tkn pipeline describe build-and-deploy
     ```
 
-3. Start a run. The `source` workspace gets a new 1 GiB PersistentVolumeClaim for each run, created from a **volumeClaimTemplate**:
+    `tkn pipeline describe` prints the Pipeline's parameters, workspaces and Tasks, and its most recent runs.
+
+    - **Check:** the output lists the three Tasks `fetch-source`, `build-image` and `deploy`.
+
+7. Start a run of the Pipeline and stream the logs. Give the `source` workspace a new 1 GiB PersistentVolumeClaim for each run, created from a **volumeClaimTemplate**.
+    - **Reference:** [Tekton Overview](../../../devops/tekton/index.md#tekton-overview) introduces the `tkn` CLI. It doesn't cover starting a Pipeline or creating a workspace volume, so use one of these:
 
     === "tkn"
 
@@ -291,106 +298,137 @@ This lab uses three of them:
         tkn pipelinerun logs --last -f
         ```
 
-4. When the run succeeds, call the app:
+    | Part | What it does |
+    | --- | --- |
+    | `tkn pipeline start build-and-deploy` | Creates a **PipelineRun** for the Pipeline |
+    | `--use-param-defaults` | Uses the default value of every parameter instead of asking for each |
+    | `--workspace name=source,volumeClaimTemplateFile=...` | Binds the `source` workspace to a new PersistentVolumeClaim created from the template file for this run |
+    | `--showlog` | Streams the logs of the PipelineRun until it finishes |
+    | `generateName` | Gives each PipelineRun created from the YAML a unique name (`oc create` is needed because `oc apply` requires a fixed name) |
+    | `tkn pipelinerun logs --last -f` | Follows the logs of the most recent PipelineRun |
 
-    ```bash
-    tkn pipelinerun list
-    curl "http://$(oc get route greeting -o jsonpath='{.spec.host}')/greeting?name=Tekton"
-    ```
+    - **Check:** the logs show all three Tasks finishing, and `tkn pipelinerun list` shows the run with status `Succeeded`.
 
-    ```json
-    {"message":"Welcome to the Cloud Native Bootcamp!","name":"Tekton"}
-    ```
+8. Call the `greeting` app with the name `Tekton`.
+    - **Reference:** [Routes, Commands](../../../openshift/services-networking/routes.md#commands) shows how to get a Route's URL. Get the Route `greeting`, which the pipeline created, and call `/greeting?name=Tekton` over `http` with `curl`.
+    - **Check:** the response is JSON containing `"name":"Tekton"`.
 
 ## Part 3: The web console
 
-1. In the web console, go to **Pipelines** and select the `tekton-lab` project.
-2. Open `build-and-deploy` to see the Tasks as a graph, and open a PipelineRun to see each Task's logs and duration.
-3. Start another run from **Actions > Start**. Choose **VolumeClaimTemplate** for the `source` workspace.
-4. Change the `GREETING` environment variable of the Deployment (`oc set env deployment/greeting GREETING="Hello from the pipeline"`), run the pipeline again, and check whether your setting survives the redeploy. Why does it?
+9. In the web console, go to **Pipelines** and select the `tekton-lab` project. Open `build-and-deploy` to see the Tasks as a graph, and open a PipelineRun to see each Task's logs and duration.
+    - **Check:** the graph shows `fetch-source`, `build-image` and `deploy` in order.
+
+10. Start another run from **Actions > Start**. Choose **VolumeClaimTemplate** for the `source` workspace.
+    - **Check:** a new PipelineRun appears in the list and succeeds.
+
+11. Change the `GREETING` environment variable of the `greeting` Deployment to `Hello from the pipeline`, run the pipeline again, and check whether your setting survives the redeploy. Why does it?
+    - **Reference:** [Container Configuration, Environment Variable](../../../openshift/configuration/index.md#environment-variable) explains environment variables. It doesn't cover changing them on a running Deployment, so use this command:
+
+    ```bash
+    oc set env deployment/greeting GREETING="Hello from the pipeline"
+    ```
+
+    `oc set env` updates the environment of the Deployment's containers and rolls out new pods.
+
+    - **Check:** after the second run, `curl` on the Route still returns your message. Look at the `deploy` script in `pipeline.yaml` to find out why.
 
 ## Part 4 (optional): Build your own fork on every push
 
-To run the pipeline automatically when code changes, it needs to be triggered by your Git provider.
+To run the pipeline automatically when code changes, your Git provider has to trigger it.
 
-1. Fork [the bootcamp repository](https://github.com/ibm-cloud-architecture/cloud-native-bootcamp) on GitHub.
-2. Save these Triggers resources as `triggers.yaml`. They create an **EventListener** that receives GitHub push webhooks and starts a PipelineRun for the pushed commit:
+12. Fork [the bootcamp repository](https://github.com/ibm-cloud-architecture/cloud-native-bootcamp) on GitHub.
+    - **Check:** the fork appears in your GitHub account.
 
-    ```yaml title="triggers.yaml"
-    apiVersion: triggers.tekton.dev/v1beta1
-    kind: TriggerBinding
-    metadata:
-      name: github-push
-    spec:
-      params:
-        - name: git-url
-          value: $(body.repository.clone_url)
-        - name: git-revision
-          value: $(body.after)
-    ---
-    apiVersion: triggers.tekton.dev/v1beta1
-    kind: TriggerTemplate
-    metadata:
-      name: build-and-deploy
-    spec:
-      params:
-        - name: git-url
-        - name: git-revision
-      resourcetemplates:
-        - apiVersion: tekton.dev/v1
-          kind: PipelineRun
-          metadata:
-            generateName: build-and-deploy-
-          spec:
-            pipelineRef:
-              name: build-and-deploy
-            params:
-              - { name: git-url, value: $(tt.params.git-url) }
-              - { name: git-revision, value: $(tt.params.git-revision) }
-            workspaces:
-              - name: source
-                volumeClaimTemplate:
-                  spec:
-                    accessModes: [ReadWriteOnce]
-                    resources:
-                      requests:
-                        storage: 1Gi
-    ---
-    apiVersion: triggers.tekton.dev/v1beta1
-    kind: EventListener
-    metadata:
-      name: github-listener
-    spec:
-      serviceAccountName: pipeline
-      triggers:
-        - name: github-push
-          interceptors:
-            - ref:
-                name: github
-              params:
-                - name: eventTypes
-                  value: ["push"]
-          bindings:
-            - ref: github-push
-          template:
-            ref: build-and-deploy
-    ```
+### Create triggers.yaml
 
-3. Create the resources and expose the EventListener:
+Three Tekton Triggers resources that receive GitHub push webhooks and start a PipelineRun for the pushed commit.
 
-    ```bash
-    oc apply -f triggers.yaml
-    oc expose service el-github-listener
-    echo "http://$(oc get route el-github-listener -o jsonpath='{.spec.host}')"
-    ```
+```yaml title="triggers.yaml"
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: github-push
+spec:
+  params:
+    - name: git-url
+      value: $(body.repository.clone_url)
+    - name: git-revision
+      value: $(body.after)
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: build-and-deploy
+spec:
+  params:
+    - name: git-url
+    - name: git-revision
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: build-and-deploy-
+      spec:
+        pipelineRef:
+          name: build-and-deploy
+        params:
+          - { name: git-url, value: $(tt.params.git-url) }
+          - { name: git-revision, value: $(tt.params.git-revision) }
+        workspaces:
+          - name: source
+            volumeClaimTemplate:
+              spec:
+                accessModes: [ReadWriteOnce]
+                resources:
+                  requests:
+                    storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: github-listener
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - name: github-push
+      interceptors:
+        - ref:
+            name: github
+          params:
+            - name: eventTypes
+              value: ["push"]
+      bindings:
+        - ref: github-push
+      template:
+        ref: build-and-deploy
+```
 
-4. In your fork, open **Settings > Webhooks > Add webhook**. Set **Payload URL** to the URL above and **Content type** to `application/json`, then save. Your cluster must be reachable from the internet, so this doesn't work with OpenShift Local.
-5. Change the default message in `sample-app/greeting/main.go`, then commit and push. A new PipelineRun starts automatically: `tkn pipelinerun list`.
+- `TriggerBinding` copies fields from the webhook's JSON body, here the clone URL and the pushed commit, into parameters.
+- `TriggerTemplate` defines what to create for each event. It's the same PipelineRun you started by hand, with the parameters filled in from the binding.
+- `EventListener` runs a pod and a Service that receive the webhook. The `github` interceptor passes only `push` events, and the listener uses the `pipeline` ServiceAccount to create the PipelineRun.
+
+13. Create the resources and expose the EventListener outside the cluster. Print its URL.
+    - **Reference:** [Deployments, References](../../../openshift/deployments/index.md#references) shows `oc apply -f`. [Services, References](../../../openshift/services-networking/services.md#references) shows `oc expose service`. The EventListener's Service is named `el-github-listener`. [Routes, Commands](../../../openshift/services-networking/routes.md#commands) shows how to get a Route's URL. Get the Route `el-github-listener` and print the URL with `echo`.
+    - **Check:** you get a URL such as `http://el-github-listener-tekton-lab.apps.example.com`.
+
+14. In your fork, open **Settings > Webhooks > Add webhook**. Set **Payload URL** to the URL above and **Content type** to `application/json`, then save.
+    - **Check:** GitHub shows a green check mark for the webhook's first delivery.
+
+    !!! warning "OpenShift Local"
+        Your cluster must be reachable from the internet, so this step doesn't work with OpenShift Local.
+
+15. Change the default message in `sample-app/greeting/main.go`, then commit and push.
+    - **Reference:** [Tekton Overview](../../../devops/tekton/index.md#tekton-overview) introduces the `tkn` CLI. It doesn't cover listing runs, so use this command: `tkn pipelinerun list`
+    - **Check:** a new PipelineRun starts automatically after your push.
 
 !!! tip "Pipelines as Code"
     OpenShift Pipelines also includes **[Pipelines as Code](https://pipelinesascode.com/)**. It keeps PipelineRun definitions in a `.tekton/` directory of your repository, runs them on pushes and pull requests, and reports the results back to GitHub or GitLab. It's the recommended way to run CI on OpenShift.
 
 ## Cleanup
+
+Delete the `tekton-lab` project.
+
+- **Reference:** [Projects/Namespaces, References](../../../openshift/core-concepts/namespaces-projects/index.md#references) shows project management. It doesn't cover deleting a project, so use this command:
 
 ```bash
 oc delete project tekton-lab

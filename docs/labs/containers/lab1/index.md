@@ -51,11 +51,11 @@ mkdir greeting && cd greeting
 Save the following two files in it. The service returns a JSON greeting and reads its message from the `GREETING` environment variable.
 
 ```go title="main.go"
---8<-- "docs/labs/containers/lab1/greeting/main.go"
+--8<-- "sample-app/greeting/main.go"
 ```
 
 ```text title="go.mod"
---8<-- "docs/labs/containers/lab1/greeting/go.mod"
+--8<-- "sample-app/greeting/go.mod"
 ```
 
 You don't need Go installed. The build happens inside a container.
@@ -65,7 +65,7 @@ You don't need Go installed. The build happens inside a container.
 A `Containerfile` describes how to build the image. Save this file as `Containerfile` in the same directory:
 
 ```dockerfile title="Containerfile"
---8<-- "docs/labs/containers/lab1/greeting/Containerfile"
+--8<-- "sample-app/greeting/Containerfile"
 ```
 
 [Container Tool Tutorials, step 6](../../../containers/container-tool-tutorials.md#6-write-a-dockerfile) explains `FROM`, `COPY` and `EXPOSE`. It doesn't cover multi-stage builds, `RUN`, `USER` or `CMD`:
