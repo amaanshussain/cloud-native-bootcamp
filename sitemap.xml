@@ -28,6 +28,9 @@
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/containers/benefitsContainers/</loc>
       </url>
       <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/containers/container-tool-tutorials/</loc>
+      </url>
+      <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/containers/imageregistry/</loc>
       </url>
       <url>
@@ -64,10 +67,22 @@
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/containers/container-registry/</loc>
       </url>
       <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/containers/lab1/</loc>
+      </url>
+      <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/containers/lab2/</loc>
+      </url>
+      <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/devops/argocd/</loc>
       </url>
       <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/devops/argocd/index-copy/</loc>
+      </url>
+      <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/devops/tekton/</loc>
+      </url>
+      <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/devops/tekton/index-copy/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/</loc>
@@ -79,10 +94,16 @@
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab1/</loc>
       </url>
       <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab1/index-copy/</loc>
+      </url>
+      <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab1/solution/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab10/</loc>
+      </url>
+      <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab10/index-copy/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab10/solution/</loc>
@@ -91,10 +112,16 @@
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab11/</loc>
       </url>
       <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab11/index-copy/</loc>
+      </url>
+      <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab11/solution/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab12/</loc>
+      </url>
+      <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab12/index-copy/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab12/solution/</loc>
@@ -103,10 +130,16 @@
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab13/</loc>
       </url>
       <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab13/index-copy/</loc>
+      </url>
+      <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab13/solution/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab14/</loc>
+      </url>
+      <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab14/index-copy/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab14/solution/</loc>
@@ -115,10 +148,16 @@
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab2/</loc>
       </url>
       <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab2/index-copy/</loc>
+      </url>
+      <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab2/solution/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab3/</loc>
+      </url>
+      <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab3/index-copy/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab3/solution/</loc>
@@ -127,10 +166,16 @@
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab4/</loc>
       </url>
       <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab4/index-copy/</loc>
+      </url>
+      <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab4/solution/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab5/</loc>
+      </url>
+      <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab5/index-copy/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab5/solution/</loc>
@@ -139,10 +184,16 @@
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab6/</loc>
       </url>
       <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab6/index-copy/</loc>
+      </url>
+      <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab6/solution/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab7/</loc>
+      </url>
+      <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab7/index-copy/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab7/solution/</loc>
@@ -151,10 +202,16 @@
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab8/</loc>
       </url>
       <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab8/index-copy/</loc>
+      </url>
+      <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab8/solution/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab9/</loc>
+      </url>
+      <url>
+        <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab9/index-copy/</loc>
       </url>
       <url>
         <loc>https://ibm-cloud-architecture.github.io/cloud-native-bootcamp/labs/kubernetes/lab9/solution/</loc>
