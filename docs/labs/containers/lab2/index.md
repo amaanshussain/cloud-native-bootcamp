@@ -7,7 +7,7 @@ tags:
   - OpenShift
 ---
 
-# Image Registry Lab: Tutorial Reference
+# Image Registry Lab
 
 <span class="lab-badge">40 min</span> <span class="lab-badge">Intermediate</span>
 

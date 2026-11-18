@@ -57,7 +57,7 @@ One of the most common runtime dependencies is the exposure of a container's spe
 
 Another runtime dependency is file storage for saving the application state.  Kubernetes offers Pod-level storage utilities that are capable of surviving container restarts.  Applications needing to read or write to these storage mechanisms will require nodes that is provided the type of volume required by the application.  If there is no nodes available with the required volume type, then the pod will not be scheduled to be deployed at all.
 
-A different kind of dependency is configurations.  ConfigMaps are used by Kubernetes to strategically plan out how to consume it's settings through either environment variables or the filesystem.  Secrets are consumed the same was as a ConfigMap in Kubernetes.  Secrets are a more secure way to distribute environment-specific configurations to containers within the pod. 
+A different kind of dependency is configurations.  ConfigMaps are used by Kubernetes to strategically plan out how to consume it's settings through either environment variables or the filesystem.  Secrets are consumed the same way as a ConfigMap in Kubernetes.  Secrets are a more secure way to distribute environment-specific configurations to containers within the pod. 
 
 
 ### Resource Profiles

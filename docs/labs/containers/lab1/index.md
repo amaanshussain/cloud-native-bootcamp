@@ -5,7 +5,7 @@ tags:
   - Containers
 ---
 
-# Containers Lab: Tutorial Reference
+# Containers Lab
 
 <span class="lab-badge">40 min</span> <span class="lab-badge">Beginner</span>
 

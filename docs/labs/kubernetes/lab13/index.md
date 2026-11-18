@@ -1,127 +1,141 @@
 ---
 tags:
   - Lab
-  - Observability
   - Intermediate
+  - Observability
+  - Metrics
+  - Logging
+  - Tracing
+  - OpenShift
+  - Kubernetes
 ---
 
-# Lab 13 - Observability
+# Observability Lab
 
 <span class="lab-badge">45 min</span> <span class="lab-badge">Intermediate</span>
 
-## Problem
+In this lab you'll implement end-to-end cloud-native observability for the `greeting` microservice across the three core signals: querying **metrics** with PromQL, triggering automated **alerts** with PrometheusRule, analyzing distributed **traces** in Jaeger, and correlating **structured logs** via trace IDs.
 
-Users say the `greeting` service is "sometimes slow and sometimes broken". Instrument and observe it so you can prove it:
+This lab uses a **tutorial reference** format. Each step gives you a goal and points to the section of the [Observability](../../../openshift/observability/index.md), [Helm & Kustomize](../../../openshift/packaging/index.md), or [Projects/Namespaces](../../../openshift/core-concepts/namespaces-projects/index.md) documentation that shows the command or query syntax you need. **You build the queries and commands yourself** by adapting the documentation examples to this lab. When the documentation doesn't cover something, the step gives you the command and explains what it does.
 
-- **Metrics:** collect the service's request rate, error rate and latency with Prometheus.
-- **Alerts:** fire an alert when more than 10% of requests fail.
-- **Traces:** find a slow request in Jaeger and see which part of it was slow.
-- **Logs:** jump from a log line to its trace by using the trace ID.
-
-See [Observability](../../../openshift/observability/index.md) for the concepts.
+!!! tip "Keep the documentation open"
+    Open [Observability](../../../openshift/observability/index.md) in a second tab before you start. It provides PromQL templates for the RED method (Rate, Errors, Duration) and explains OTel tracing and Prometheus alerting rules.
 
 ## Prerequisites
 
-- An OpenShift cluster with **user workload monitoring** enabled. On the local lab cluster, use `local-cluster.sh --monitoring` instead. See [Lab Environments](../../../lab-environments.md).
-- `oc`, `helm`, and a clone of the bootcamp repository. Run the commands from its `sample-app` directory, as in [Lab 12](../lab12/index.md).
+- An OpenShift cluster with **user workload monitoring** enabled (or a local cluster started with `local-cluster.sh --monitoring`). See [Lab Environments](../../../lab-environments.md).
+- `oc`, `helm`, and a local clone of the bootcamp repository with your terminal located in `sample-app`:
 
-??? info "Cluster admins: enable user workload monitoring"
-    On OpenShift Local or your own cluster, enable it once as `kubeadmin`:
+```bash
+cd sample-app
+```
 
-    ```bash
-    oc apply -f - <<'EOF'
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: cluster-monitoring-config
-      namespace: openshift-monitoring
-    data:
-      config.yaml: |
-        enableUserWorkload: true
-    EOF
-    oc get pods -n openshift-user-workload-monitoring   # wait until they're Running
-    ```
+## Part 1: Deploy Jaeger and instrument the Greeting service
 
-    Users who aren't project admins also need the `monitoring-edit` role in their project: `oc policy add-role-to-user monitoring-edit <user> -n <project>`.
-
-## Setup
-
-1. Create a project and deploy Jaeger, which receives traces and serves a UI:
+1. Create a project named `observability-lab` and deploy Jaeger for distributed tracing.
+    - **Reference:** [Projects/Namespaces, References](../../../openshift/core-concepts/namespaces-projects/index.md#references). Deploy Jaeger and expose its UI:
 
     ```bash
     oc new-project observability-lab
     oc apply -f observability/jaeger.yaml
     oc rollout status deployment/jaeger
     oc expose service jaeger --port=ui
-    echo "http://$(oc get route jaeger -o jsonpath='{.spec.host}')"
+    echo "Jaeger UI: http://$(oc get route jaeger -o jsonpath='{.spec.host}')"
     ```
 
-2. Install the `greeting` chart with tracing pointed at Jaeger and a ServiceMonitor for Prometheus:
+    - **Check:** `oc get deployment/jaeger` shows 1 available replica, and the Route URL opens the Jaeger web UI.
+
+2. Install the `greeting` Helm chart configured with OpenTelemetry tracing pointing to Jaeger and a Prometheus ServiceMonitor.
+    - **Reference:** [Helm & Kustomize, Helm](../../../openshift/packaging/index.md#helm) shows `helm install`. [Observability, Scraping your application](../../../openshift/observability/index.md#scraping-your-application) explains ServiceMonitors.
 
     ```bash
     helm install greeting ./helm/greeting --wait \
       --set tracing.otlpEndpoint=http://jaeger:4318 \
       --set serviceMonitor.enabled=true
-    oc logs deployment/greeting | grep tracing
     ```
 
-    The log shows `"msg":"tracing enabled","endpoint":"http://jaeger:4318"`.
+    - **Check:** `oc logs deployment/greeting | grep tracing` outputs `"msg":"tracing enabled","endpoint":"http://jaeger:4318"`.
 
-## Part 1: Metrics
+## Part 2: Scrape and query Prometheus Metrics
 
-3. Look at the raw metrics the app exposes:
-
-    ```bash
-    oc port-forward service/greeting 8080:8080
-    ```
+3. Inspect the raw Prometheus metrics endpoint exposed by the application.
+    - **Reference:** [Observability, OpenTelemetry](../../../openshift/observability/index.md#opentelemetry) describes application metrics endpoints. Run port forwarding and curl:
 
     ```bash
-    curl -s "localhost:8080/greeting?name=metrics"; curl -s localhost:8080/fail
+    oc port-forward service/greeting 8080:8080 &
+    PID=$!
+    curl -s "localhost:8080/greeting?name=metrics"
+    curl -s localhost:8080/fail
     curl -s localhost:8080/metrics | grep ^greeting_
+    kill $PID
     ```
 
-    You'll see counters like `greeting_requests_total{code="500",path="/fail"} 1` and histogram buckets for `greeting_request_duration_seconds`.
+    - **Check:** output displays counters `greeting_requests_total` and histogram buckets `greeting_request_duration_seconds_bucket`.
 
-4. Start the load generator. For 5 minutes it sends normal, failing and slow requests:
+4. Deploy the load generator to produce realistic traffic patterns (normal, failing, and slow requests).
+    - Apply the load generator manifest:
 
     ```bash
     oc apply -f observability/load.yaml
     ```
 
-5. Wait a minute, then query the metrics. In the web console, go to **Observe > Metrics** in your project. On the local cluster, run `kubectl -n monitoring port-forward svc/prometheus-operated 9090` and open <http://localhost:9090>. Write PromQL queries for:
+    - **Check:** `oc get pod load` shows status `Running`.
 
-    - the request **rate** per status code
-    - the **error ratio** (the share of requests that return 5xx)
-    - the **95th percentile latency** of `/greeting`
+5. Query the metrics in OpenShift web console under **Observe > Metrics** (or Prometheus UI at `http://localhost:9090`).
+    - **Reference:** [Observability, What to measure](../../../openshift/observability/index.md#what-to-measure) shows PromQL queries for the RED method:
+        - Request rate by status code: `sum by (code) (rate(greeting_requests_total[5m]))`
+        - Error ratio: `sum(rate(greeting_requests_total{code=~"5.."}[5m])) / sum(rate(greeting_requests_total[5m]))`
+        - 95th percentile latency: `histogram_quantile(0.95, sum by (le) (rate(greeting_request_duration_seconds_bucket[5m])))`
+    - **Check:** the error ratio calculates to approximately `0.33` (~33% failure rate), and p95 latency shows ~`0.47s`.
 
-## Part 2: Alerts
+## Part 3: Configure Prometheus Alerting Rules
 
-6. Create the alert rule:
+6. Create a PrometheusRule alert that triggers when the service error ratio exceeds 10% for over 1 minute.
+    - **Reference:** [Observability, Scraping your application](../../../openshift/observability/index.md#scraping-your-application) shows the `PrometheusRule` schema. Apply the alert definition:
 
     ```bash
     oc apply -f observability/greeting-alerts.yaml
     ```
 
-7. Watch the alert in **Observe > Alerts**, or at <http://localhost:9090/alerts> on the local cluster. It's **Pending** first. The load sends one failing request for every three, about a 33% error ratio, so after the rule's `for: 1m` it changes to **Firing**. Why does the rule use a ratio and `for: 1m`, not "any 500 error"?
+    - **Check:** in OpenShift console under **Observe > Alerts** (or `http://localhost:9090/alerts`), `GreetingHighErrorRate` transitions from `Pending` to `Firing` after 1 minute.
 
-## Part 3: Traces
+## Part 4: Analyze Distributed Traces and Correlate Logs
 
-8. Open the Jaeger UI (the Route URL from step 1, or `oc port-forward service/jaeger 16686:16686` and <http://localhost:16686>). Search for service **greeting** with **Min Duration** `250ms`.
+7. Open the Jaeger UI and search for slow traces from the `greeting` service with Min Duration `250ms`.
+    - **Reference:** [Observability, OpenTelemetry](../../../openshift/observability/index.md#opentelemetry) describes span hierarchies.
+    - **Check:** opening a trace reveals the `slow dependency` child span consuming ~300ms of the total request duration.
 
-9. Open one of the slow traces. Which span takes most of the time, and what are its attributes?
-
-## Part 4: Logs
-
-10. The app writes JSON logs that include the trace ID. Find a slow request in the logs, then look its `trace_id` up in Jaeger (paste it into the search box at the top of the UI):
+8. Correlate JSON log entries to Jaeger traces using the embedded `trace_id`.
+    - **Reference:** [Observability, The three signals](../../../openshift/observability/index.md#the-three-signals) explains log-to-trace correlation. Query the logs:
 
     ```bash
-    oc logs deployment/greeting | grep '"path":"/greeting"' | grep -v '"duration_ms":0' | tail -3
+    oc logs deployment/greeting | grep '"path":"/greeting"' | grep -v '"duration_ms":0' | tail -1
     ```
 
+    - Copy the `trace_id` from the log JSON into the Jaeger search bar.
+    - **Check:** Jaeger opens the exact distributed trace corresponding to that log line.
+
 ## Cleanup
+
+Delete the load generator, uninstall the Helm release, and delete the project.
+
+- **Reference:** [Helm & Kustomize, Helm](../../../openshift/packaging/index.md#helm) and [Projects/Namespaces](../../../openshift/core-concepts/namespaces-projects/index.md#references).
 
 ```bash
 oc delete pod load
 helm uninstall greeting
 oc delete project observability-lab
 ```
+
+| Part | What it does |
+| --- | --- |
+| `oc delete pod load` | Stops traffic generation |
+| `helm uninstall greeting` | Removes the greeting deployment and ServiceMonitor |
+| `oc delete project observability-lab` | Deletes the project and Jaeger resources |
+
+## What you learned
+
+- [x] Collecting and calculating RED metrics (Rate, Errors, Duration) with PromQL
+- [x] Writing actionable SLO-based alerts using `PrometheusRule` resources
+- [x] Exporting OpenTelemetry spans over OTLP to Jaeger for latency root-cause analysis
+- [x] Correlating structured application JSON logs with distributed traces via `trace_id`
